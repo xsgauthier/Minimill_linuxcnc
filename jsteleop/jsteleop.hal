@@ -1,0 +1,35 @@
+loadusr -W jsteleop /dev/ttyUSB0 3
+
+# To avoid any startup problems and machine turning off transients, mux/sample-hold the analog signals to avoid sending a jog command.
+loadrt mux2 names=mux2_x,mux2_y,mux2_z 
+addf mux2_x servo-thread
+addf mux2_y servo-thread
+addf mux2_z servo-thread
+
+# Use a mux as a sample hold so analog jogs don't change when machine is off.
+net machine-is-on <= halui.machine.is-on => mux2_x.sel mux2_y.sel mux2_z.sel  # Control the mux with the machine on/off state.
+net jog-x-pre <= jsteleop.analog-in-00 => mux2_x.in1
+net jog-y-pre <= jsteleop.analog-in-01 => mux2_y.in1
+net jog-z-pre <= jsteleop.analog-in-02 => mux2_z.in1 # rz feels more natural.
+net jog-x-analog <= mux2_x.out => mux2_x.in0 halui.joint.0.analog halui.axis.x.analog 
+net jog-y-analog <= mux2_y.out => mux2_y.in0 halui.joint.1.analog halui.axis.y.analog 
+net jog-z-analog <= mux2_z.out => mux2_z.in0 halui.joint.2.analog halui.axis.z.analog 
+
+setp halui.axis.jog-deadband 0.05
+setp halui.axis.jog-speed 1100.0
+setp halui.joint.jog-deadband 0.05
+setp halui.joint.jog-speed 1100.0
+
+setp jsteleop.analog-in-00-gain 2.0
+setp jsteleop.analog-in-00-offset -1.0
+
+setp jsteleop.analog-in-01-gain 2.0
+setp jsteleop.analog-in-01-offset -1.0
+
+setp jsteleop.analog-in-02-gain 2.0
+setp jsteleop.analog-in-02-offset -1.0
+
+net machine-on jsteleop.digital-in-a  halui.machine.on
+net machine-off jsteleop.digital-in-b  halui.machine.off
+
+net home-all jsteleop.digital-in-start  halui.home-all

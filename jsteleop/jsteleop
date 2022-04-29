@@ -1,0 +1,131 @@
+#!/usr/bin/python
+import serial
+import hal
+import sys
+import time
+
+def encode(addr, data):
+    if data < 0 or data > 2048: raise ValueError, "data %02d out of range" % data
+    if addr < 0 or addr > 8: raise ValueError, "address %02d out of range" % addr
+    b1 = 0x80 | (addr << 4) | (data >> 7)
+    b2 = data & 0x7f
+    return chr(b1) + chr(b2)
+
+PORT = "/dev/ttyUSB0"
+
+if len(sys.argv) > 1:
+    PORT = sys.argv[1]
+
+if len(sys.argv) > 2:
+    nout = int(sys.argv[2])
+else:
+    nout = 6
+
+if nout > 6 or nout < 0:
+    raise SystemExit, "Number of digital outputs must be from 0 to 6"
+
+ser = serial.Serial(PORT, 9600, timeout=2)
+
+c = hal.component("jsteleop")
+
+c.newpin("analog-in-00", hal.HAL_FLOAT, hal.HAL_OUT)
+c.newparam("analog-in-00-offset", hal.HAL_FLOAT, hal.HAL_RW)
+c.newparam("analog-in-00-gain", hal.HAL_FLOAT, hal.HAL_RW)
+
+c.newpin("analog-in-01", hal.HAL_FLOAT, hal.HAL_OUT)
+c.newparam("analog-in-01-offset", hal.HAL_FLOAT, hal.HAL_RW)
+c.newparam("analog-in-01-gain", hal.HAL_FLOAT, hal.HAL_RW)
+
+c.newpin("analog-in-02", hal.HAL_FLOAT, hal.HAL_OUT)
+c.newparam("analog-in-02-offset", hal.HAL_FLOAT, hal.HAL_RW)
+c.newparam("analog-in-02-gain", hal.HAL_FLOAT, hal.HAL_RW)
+
+c.newpin("digital-in-a", hal.HAL_BIT, hal.HAL_OUT)
+c.newpin("digital-in-a-not", hal.HAL_BIT, hal.HAL_OUT)
+c.newpin("digital-in-b", hal.HAL_BIT, hal.HAL_OUT)
+c.newpin("digital-in-b-not", hal.HAL_BIT, hal.HAL_OUT)
+c.newpin("digital-in-x", hal.HAL_BIT, hal.HAL_OUT)
+c.newpin("digital-in-x-not", hal.HAL_BIT, hal.HAL_OUT)
+c.newpin("digital-in-y", hal.HAL_BIT, hal.HAL_OUT)
+c.newpin("digital-in-y-not", hal.HAL_BIT, hal.HAL_OUT)
+c.newpin("digital-in-start", hal.HAL_BIT, hal.HAL_OUT)
+c.newpin("digital-in-start-not", hal.HAL_BIT, hal.HAL_OUT)
+c.newpin("digital-in-z", hal.HAL_BIT, hal.HAL_OUT)
+c.newpin("digital-in-z-not", hal.HAL_BIT, hal.HAL_OUT)
+c.newpin("digital-in-dleft", hal.HAL_BIT, hal.HAL_OUT)
+c.newpin("digital-in-dleft-not", hal.HAL_BIT, hal.HAL_OUT)
+c.newpin("digital-in-dright", hal.HAL_BIT, hal.HAL_OUT)
+c.newpin("digital-in-dright-not", hal.HAL_BIT, hal.HAL_OUT)
+c.newpin("digital-in-ddown", hal.HAL_BIT, hal.HAL_OUT)
+c.newpin("digital-in-ddown-not", hal.HAL_BIT, hal.HAL_OUT)
+c.newpin("digital-in-dup", hal.HAL_BIT, hal.HAL_OUT)
+c.newpin("digital-in-dup-not", hal.HAL_BIT, hal.HAL_OUT)
+
+c.newpin("analog-out-00", hal.HAL_FLOAT, hal.HAL_IN)
+c.newparam("analog-out-00-offset", hal.HAL_FLOAT, hal.HAL_RW)
+c.newparam("analog-out-00-scale", hal.HAL_FLOAT, hal.HAL_RW)
+c['analog-in-00-gain'] = 1.0
+c['analog-out-00-scale'] = 1.0
+
+#for port in range(nout):
+#    c.newpin("digital-out-%02d" % pinmap[port], hal.HAL_BIT, hal.HAL_IN)
+#    c.newparam("digital-out-%02d-invert" % pinmap[port], hal.HAL_BIT, hal.HAL_RW)
+#for port in range(nout, 6):
+#    c.newpin("digital-in-%02d" % pinmap[port], hal.HAL_BIT, hal.HAL_OUT)
+#    c.newpin("digital-in-%02d-not" % pinmap[port], hal.HAL_BIT, hal.HAL_OUT)
+#    c.newparam("digital-in-%02d-pullup" % pinmap[port], hal.HAL_BIT, hal.HAL_RW)
+c.ready()
+
+firstbyte = 0
+state = 0
+try:
+    while 1:
+        while ser.inWaiting():
+            byte = ord(ser.read())
+            if firstbyte & 0x80 == 0x80 and byte & 0x80 == 0:
+                v = (firstbyte << 7) | byte
+                port = (v >> 11) & 7
+
+                if port <= 2:
+                    gain = c['analog-in-%02d-gain' % port] or 1.
+                    offset = c['analog-in-%02d-offset' % port]
+                    value = (v & 255) / 255. * 1.0 * gain + offset
+                    c['analog-in-%02d' % port] = value
+		elif port == 3:
+                    c['digital-in-a-not'] = not (v & 0x01)
+                    c['digital-in-a'] = not not (v & 0x01)
+                    c['digital-in-b-not'] = not (v & 0x02)
+                    c['digital-in-b'] = not not (v & 0x02)
+                    c['digital-in-x-not'] = not (v & 0x04)
+                    c['digital-in-x'] = not not (v & 0x04)
+                    c['digital-in-y-not'] = not (v & 0x08)
+                    c['digital-in-y'] = not not (v & 0x08)
+                    c['digital-in-start-not'] = not (v & 0x10)
+                    c['digital-in-start'] = not not (v & 0x10)
+                    c['digital-in-z-not'] = not (v & 0x20)
+                    c['digital-in-z'] = not not (v & 0x20)
+                    c['digital-in-dleft-not'] = not (v & 0x40)
+                    c['digital-in-dleft'] = not not (v & 0x40)
+                    c['digital-in-dright-not'] = not (v & 0x80)
+                    c['digital-in-dright'] = not not (v & 0x80)
+                    c['digital-in-ddown-not'] = not (v & 0x100)
+                    c['digital-in-ddown'] = not not (v & 0x100)
+                    c['digital-in-dup-not'] = not (v & 0x200)
+                    c['digital-in-dup'] = not not (v & 0x200)
+
+            firstbyte = byte
+
+        scale = c['analog-out-%02d-scale' % 0] or 1.
+        offset = c['analog-out-%02d-offset' % 0]
+        data = (c['analog-out-%02d' % 0] - offset) / scale
+        data = int(data * 255 + 0.5)
+        if data < 0: data = 0
+        if data > 255: data = 255
+        data = data | (state << 11)
+        ser.write(chr(0x80 | (data >> 7)))
+        ser.write(chr(data & 0x7f))
+        state = (state+1) % 6
+        time.sleep(.001)
+except (KeyboardInterrupt,):
+    raise SystemExit, 0
+
