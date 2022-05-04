@@ -15,8 +15,10 @@ uint8_t adc=0;
 uint8_t firstbyte=0;
 uint8_t dac = 0;
 
-uint8_t pinmap[3] = {2, 4, 6};
+uint8_t pinmap[2] = {2, 6};
 uint8_t dacpinmap[2] = {3, 5};
+
+uint8_t lcd_val[2] = {0, 0};
 
 void loop() {
   while(Serial.available()) 
@@ -34,25 +36,28 @@ void loop() {
           digitalWrite(pinmap[address], out);
           pinMode(pinmap[address], dir);
       } else if (address == 2) {
-          digitalWrite(pinmap[address], out);
-          pinMode(pinmap[address], dir);
+        // digitalWrite(pinmap[address], out);
+        // pinMode(pinmap[address], dir);
+        lcd_val[0] = dac;
       } else if (address == 3) {
-        uint8_t sRow = 0;
-        lcd.setCursor(sRow/* row */, 0/* col */);
-        lcd.print("HD:   C");
-        if (dac >= 100)
-          lcd.setCursor(sRow+3/* row */, 0/* col */);
-        else if (dac >= 10)
-          lcd.setCursor(sRow+4/* row */, 0/* col */);
-        else
-          lcd.setCursor(sRow+5/* row */, 0/* col */);
-        lcd.print(dac, DEC);
       }
     }
     firstbyte = byte;
   }
 
   if (millis() > lcdUpdateTime) {
+    dac = lcd_val[0];
+    uint8_t sRow = 0;
+    lcd.setCursor(sRow/* row */, 0/* col */);
+    lcd.print("HD:   C");
+    if (dac >= 100)
+      lcd.setCursor(sRow+3/* row */, 0/* col */);
+    else if (dac >= 10)
+      lcd.setCursor(sRow+4/* row */, 0/* col */);
+    else
+      lcd.setCursor(sRow+5/* row */, 0/* col */);
+    lcd.print(dac, DEC);
+    
     lcdUpdateTime = millis() + 500;
   }
 
