@@ -24,6 +24,9 @@ else:
 if nout > 6 or nout < 0:
     raise SystemExit, "Number of digital outputs must be from 0 to 6"
 
+pinmap = [2,6]
+dacpinmap = [3,5]
+
 ser = serial.Serial(PORT, 9600, timeout=2)
 
 c = hal.component("jsteleop")
@@ -39,6 +42,14 @@ c.newparam("analog-in-01-gain", hal.HAL_FLOAT, hal.HAL_RW)
 c.newpin("analog-in-02", hal.HAL_FLOAT, hal.HAL_OUT)
 c.newparam("analog-in-02-offset", hal.HAL_FLOAT, hal.HAL_RW)
 c.newparam("analog-in-02-gain", hal.HAL_FLOAT, hal.HAL_RW)
+
+c.newpin("analog-in-04", hal.HAL_FLOAT, hal.HAL_OUT)
+c.newparam("analog-in-04-offset", hal.HAL_FLOAT, hal.HAL_RW)
+c.newparam("analog-in-04-gain", hal.HAL_FLOAT, hal.HAL_RW)
+
+c.newpin("analog-in-05", hal.HAL_FLOAT, hal.HAL_OUT)
+c.newparam("analog-in-05-offset", hal.HAL_FLOAT, hal.HAL_RW)
+c.newparam("analog-in-05-gain", hal.HAL_FLOAT, hal.HAL_RW)
 
 c.newpin("digital-in-a", hal.HAL_BIT, hal.HAL_OUT)
 c.newpin("digital-in-a-not", hal.HAL_BIT, hal.HAL_OUT)
@@ -61,11 +72,32 @@ c.newpin("digital-in-ddown-not", hal.HAL_BIT, hal.HAL_OUT)
 c.newpin("digital-in-dup", hal.HAL_BIT, hal.HAL_OUT)
 c.newpin("digital-in-dup-not", hal.HAL_BIT, hal.HAL_OUT)
 
-c.newpin("analog-out-00", hal.HAL_FLOAT, hal.HAL_IN)
-c.newparam("analog-out-00-offset", hal.HAL_FLOAT, hal.HAL_RW)
-c.newparam("analog-out-00-scale", hal.HAL_FLOAT, hal.HAL_RW)
-c['analog-in-00-gain'] = 1.0
-c['analog-out-00-scale'] = 1.0
+state = 0
+c.newpin("pwm-out-%02d" % dacpinmap[state], hal.HAL_FLOAT, hal.HAL_IN)
+c.newparam("pwm-out-%02d-offset" % dacpinmap[state], hal.HAL_FLOAT, hal.HAL_RW)
+c.newparam("pwm-out-%02d-scale" % dacpinmap[state], hal.HAL_FLOAT, hal.HAL_RW)
+c['pwm-out-%02d-offset' % dacpinmap[state]] = 0.0
+c['pwm-out-%02d-scale' % dacpinmap[state]] = 1.0
+
+c.newpin("relay-out-%02d" % pinmap[state], hal.HAL_BIT, hal.HAL_IN)
+c.newparam("relay-out-%02d-invert" % pinmap[state], hal.HAL_BIT, hal.HAL_RW)
+
+state = 1
+c.newpin("pwm-out-%02d" % dacpinmap[state], hal.HAL_FLOAT, hal.HAL_IN)
+c.newparam("pwm-out-%02d-offset" % dacpinmap[state], hal.HAL_FLOAT, hal.HAL_RW)
+c.newparam("pwm-out-%02d-scale" % dacpinmap[state], hal.HAL_FLOAT, hal.HAL_RW)
+c['pwm-out-%02d-offset' % dacpinmap[state]] = 0.0
+c['pwm-out-%02d-scale' % dacpinmap[state]] = 1.0
+
+c.newpin("relay-out-%02d" % pinmap[state], hal.HAL_BIT, hal.HAL_IN)
+c.newparam("relay-out-%02d-invert" % pinmap[state], hal.HAL_BIT, hal.HAL_RW)
+
+state = 2
+c.newpin("lcd-out-00", hal.HAL_FLOAT, hal.HAL_IN)
+c.newparam("lcd-out-00-offset", hal.HAL_FLOAT, hal.HAL_RW)
+c.newparam("lcd-out-00-scale", hal.HAL_FLOAT, hal.HAL_RW)
+c['lcd-out-00-offset'] = 0.0
+c['lcd-out-00-scale'] = 1.0
 
 #for port in range(nout):
 #    c.newpin("digital-out-%02d" % pinmap[port], hal.HAL_BIT, hal.HAL_IN)
@@ -91,7 +123,7 @@ try:
                     offset = c['analog-in-%02d-offset' % port]
                     value = (v & 255) / 255. * 1.0 * gain + offset
                     c['analog-in-%02d' % port] = value
-		elif port == 3:
+                elif port == 3:
                     c['digital-in-a-not'] = not (v & 0x01)
                     c['digital-in-a'] = not not (v & 0x01)
                     c['digital-in-b-not'] = not (v & 0x02)
@@ -112,19 +144,44 @@ try:
                     c['digital-in-ddown'] = not not (v & 0x100)
                     c['digital-in-dup-not'] = not (v & 0x200)
                     c['digital-in-dup'] = not not (v & 0x200)
+                elif port >= 4 and port <= 5:
+                    gain = c['analog-in-%02d-gain' % port] or 1.
+                    offset = c['analog-in-%02d-offset' % port]
+                    value = (v & 255) / 255. * 1.0 * gain + offset
+                    c['analog-in-%02d' % port] = value
 
             firstbyte = byte
 
-        scale = c['analog-out-%02d-scale' % 0] or 1.
-        offset = c['analog-out-%02d-offset' % 0]
-        data = (c['analog-out-%02d' % 0] - offset) / scale
-        data = int(data * 255 + 0.5)
-        if data < 0: data = 0
-        if data > 255: data = 255
-        data = data | (state << 11)
-        ser.write(chr(0x80 | (data >> 7)))
-        ser.write(chr(data & 0x7f))
-        state = (state+1) % 6
+        if state < 2:
+            scale = c['pwm-out-%02d-scale' % dacpinmap[state]] or 1.
+            offset = c['pwm-out-%02d-offset' % dacpinmap[state]]
+            data = (c['pwm-out-%02d' % dacpinmap[state]] - offset) / scale
+            data = int(data * 255 + 0.5)
+            if data < 0: data = 0
+            if data > 255: data = 255
+            data = data | (state << 11)
+            out = not c['relay-out-%02d' % pinmap[state]]
+            invert = not c['relay-out-%02d-invert' % pinmap[state]]
+            if out != invert:
+                data |= 0x200
+            data = data | 0x100
+            
+            ser.write(chr(0x80 | (data >> 7)))
+            ser.write(chr(data & 0x7f))
+
+        if state == 2:
+            scale = c['lcd-out-00-scale'] or 1.
+            offset = c['lcd-out-00-offset']
+            data = (c['lcd-out-00'] - offset) / scale
+            data = int(data * 255 + 0.5)
+            if data < 0: data = 0
+            if data > 255: data = 255
+            data = data | (state << 11)
+            
+            ser.write(chr(0x80 | (data >> 7)))
+            ser.write(chr(data & 0x7f))
+
+        state = (state+1) % 3
         time.sleep(.001)
 except (KeyboardInterrupt,):
     raise SystemExit, 0
