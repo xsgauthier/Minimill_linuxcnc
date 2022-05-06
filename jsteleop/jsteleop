@@ -3,6 +3,39 @@ import serial
 import hal
 import sys
 import time
+from math import *
+
+class Thermistor:
+    "Class to do the thermistor maths"
+    def __init__(self, r0, t0, beta, r1, r2):
+        self.r0 = r0                        # stated resistance, e.g. 10K
+        self.t0 = t0 + 273.15               # temperature at stated resistance, e.g. 25C
+        self.beta = beta                    # stated beta, e.g. 3500
+        self.vadc = 5.0                     # ADC reference
+        self.vcc = 5.0                      # supply voltage to potential divider
+        self.k = r0 * exp(-beta / self.t0)   # constant part of calculation
+
+        if r1 > 0:
+            self.vs = r1 * self.vcc / (r1 + r2) # effective bias voltage
+            self.rs = r1 * r2 / (r1 + r2)       # effective bias impedance
+        else:
+            self.vs = self.vcc                   # effective bias voltage
+            self.rs = r2                         # effective bias impedance
+
+    def temp(self,adc):
+        "Convert ADC reading into a temperature in Celcius"
+        v = adc * self.vadc / 1024          # convert the 10 bit ADC value to a voltage
+        r = self.rs * v / (self.vs - v)     # resistance of thermistor
+        return (self.beta / log(r / self.k)) - 273.15        # temperature
+
+    def setting(self, t):
+        "Convert a temperature into a ADC value"
+        r = self.r0 * exp(self.beta * (1 / (t + 273.15) - 1 / self.t0)) # resistance of the thermistor
+        v = self.vs * r / (self.rs + r)     # the voltage at the potential divider
+        return round(v / self.vadc * 1024)  # the ADC reading
+
+bdTrhm = Thermistor(65000, 0, 3812, 9100, 6200)
+xtTrhm = Thermistor(345184, 0, 3735, 2400, 1800)
 
 def encode(addr, data):
     if data < 0 or data > 2048: raise ValueError, "data %02d out of range" % data
@@ -46,10 +79,17 @@ c.newparam("analog-in-02-gain", hal.HAL_FLOAT, hal.HAL_RW)
 c.newpin("analog-in-04", hal.HAL_FLOAT, hal.HAL_OUT)
 c.newparam("analog-in-04-offset", hal.HAL_FLOAT, hal.HAL_RW)
 c.newparam("analog-in-04-gain", hal.HAL_FLOAT, hal.HAL_RW)
+c['analog-in-04-offset'] = 0.0
+c['analog-in-04-gain'] = 5.0
 
 c.newpin("analog-in-05", hal.HAL_FLOAT, hal.HAL_OUT)
 c.newparam("analog-in-05-offset", hal.HAL_FLOAT, hal.HAL_RW)
 c.newparam("analog-in-05-gain", hal.HAL_FLOAT, hal.HAL_RW)
+c['analog-in-05-offset'] = 0.0
+c['analog-in-05-gain'] = 5.0
+
+c.newpin("extruder-temperature-in", hal.HAL_FLOAT, hal.HAL_OUT)
+c.newpin("bed-temperature-in", hal.HAL_FLOAT, hal.HAL_OUT)
 
 c.newpin("digital-in-a", hal.HAL_BIT, hal.HAL_OUT)
 c.newpin("digital-in-a-not", hal.HAL_BIT, hal.HAL_OUT)
@@ -147,8 +187,12 @@ try:
                 elif port >= 4 and port <= 5:
                     gain = c['analog-in-%02d-gain' % port] or 1.
                     offset = c['analog-in-%02d-offset' % port]
-                    value = (v & 255) / 255. * 1.0 * gain + offset
+                    value = (v & 1023) / 1023. * 1.0 * gain + offset
                     c['analog-in-%02d' % port] = value
+                    if port == 4:
+                        c['bed-temperature-in'] = bdTrhm.temp(v & 1023)
+                    elif port == 5:
+                        c['extruder-temperature-in'] = xtTrhm.temp(v & 1023)
 
             firstbyte = byte
 

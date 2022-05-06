@@ -33,3 +33,8 @@ net machine-on jsteleop.digital-in-a  halui.machine.on
 net machine-off jsteleop.digital-in-b  halui.machine.off
 
 net home-all jsteleop.digital-in-start  halui.home-all
+
+# Configure thermo relay output
+setp jsteleop.relay-out-02-invert 1
+setp jsteleop.relay-out-06-invert 1
+
