@@ -20,7 +20,7 @@ uint8_t dacpinmap[2] = {3, 5};
 
 uint8_t lcd_val[2] = {0, 0};
 
-void pval3(char *msg, uint16_t pv, uint8_t sCol, uint8_t sRow, uint8_t pRow)
+void pval3(const char *msg, uint16_t pv, uint8_t sCol, uint8_t sRow, uint8_t pRow)
 {
   lcd.setCursor(sRow/* row */, sCol/* col */);
   lcd.print(msg);
@@ -116,13 +116,13 @@ void loop() {
        adc = 4;
     }
 
-    v = analogRead(0) | (adc << 11);
+    v = analogRead(A0) | (adc << 11);
     if(digitalRead(pinmap[0])) v |= (1<<10);
     Serial.write((v >> 7) | 0x80);
     Serial.write(v & 0x7f);
     adc = (adc + 1);
 
-    v = analogRead(1) | (adc << 11);
+    v = analogRead(A1) | (adc << 11);
     if(digitalRead(pinmap[1])) v |= (1<<10);
     Serial.write((v >> 7) | 0x80);
     Serial.write(v & 0x7f);
