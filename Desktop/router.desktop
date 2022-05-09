@@ -1,0 +1,8 @@
+[Desktop Entry]
+Version=1.0
+Terminal=false
+Name=launch router
+Exec=linuxcnc /home/jsgauthier/linuxcnc/configs/router/router.ini
+Type=Application
+Comment=Launch the MiniMill in Router mode
+Icon=/usr/share/linuxcnc/linuxcncicon.png

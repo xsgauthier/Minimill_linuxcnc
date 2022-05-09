@@ -1,0 +1,8 @@
+[Desktop Entry]
+Version=1.0
+Terminal=false
+Name=launch printer
+Exec=linuxcnc /home/jsgauthier/linuxcnc/configs/printer/printer.ini
+Type=Application
+Comment=Launch the MiniMill in 3D printer mode
+Icon=/usr/share/linuxcnc/linuxcncicon.png
