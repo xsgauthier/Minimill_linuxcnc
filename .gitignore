@@ -26,3 +26,12 @@ Desktop/
 Documents/
 .gitconfig
 
+linuxcnc/configs/router/jsteleop.hal
+linuxcnc/configs/printer/jsteleop.hal
+linuxcnc/configs/router/linuxcnc.var.bak
+linuxcnc/configs/printer/linuxcnc.var.bak
+linuxcnc/configs/router/autosave.halscope
+linuxcnc/configs/printer/autosave.halscope
+
+linuxcnc/nc_files/*.ngc
+
