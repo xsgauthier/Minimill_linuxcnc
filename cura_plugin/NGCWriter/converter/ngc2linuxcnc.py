@@ -102,7 +102,7 @@ class Ngc2LinCNC():
         G = self.getCodeInt(line, 'G')
         if M == 83:
             self.relative_extrusion = True
-        elif G == 1:    # Move
+        elif (G == 1 or G == 0):    # Move
             x = self.getCodeFloat(line, 'X')
             y = self.getCodeFloat(line, 'Y')
             z = self.getCodeFloat(line, 'Z')
