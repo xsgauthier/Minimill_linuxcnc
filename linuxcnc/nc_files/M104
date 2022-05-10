@@ -14,3 +14,4 @@ Pval = sys.argv[1]
 c = hal.component("_dummy_")
 c.ready()
 hal.set_p("jsteleop.lcd-out-02", str(float(Pval)))
+hal.set_p("pid.1.command", str(float(Pval)))

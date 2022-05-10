@@ -8,9 +8,21 @@
 
 import hal
 import sys
+import time
 
 Pval = sys.argv[1]
+set_point = float(Pval)
 
 c = hal.component("_dummy_")
 c.ready()
-hal.set_p("jsteleop.lcd-out-01", str(float(Pval)/512))
+hal.set_p("jsteleop.lcd-out-02", str(set_point))
+hal.set_p("pid.1.command", str(set_point))
+
+while True:
+	temp = float(hal.get_value("jsteleop.extruder-temperature-in"))
+	print(temp)
+	if temp >= set_point:
+		break
+	
+	time.sleep(0.1)
+

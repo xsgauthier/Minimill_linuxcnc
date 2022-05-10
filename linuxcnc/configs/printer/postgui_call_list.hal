@@ -1,2 +1,4 @@
 source jsteleop.hal
+source bed_temp.hal
+
 

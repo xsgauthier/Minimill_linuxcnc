@@ -16,7 +16,46 @@ setp jsteleop.relay-out-02-invert 1
 setp jsteleop.relay-out-06-invert 1
 
 net disp-lcd-00 jsteleop.extruder-temperature-in jsteleop.lcd-out-00
-net disp-lcd-01 jsteleop.bed-temperature-in jsteleop.lcd-out-01
+
+loadrt pwmgen output_type=0
+loadrt pid num_chan=1 debug=1
+
+addf pwmgen.make-pulses test-thread
+addf pwmgen.update test-thread
+addf pid.0.do-pid-calcs	test-thread
+
+# pwmgen.N.enable bit in
+#	Enables PWM generator N - when false, all pwmgen.N output pins are low.
+# pwmgen.N.value float in
+#	Commanded value. When value = 0.0, duty cycle is 0%, and when value = +/-scale, duty cycle is +/- 100%. (Subject to min-dc and max-dc limitations.)
+# pwmgen.N.pwm bit out (output types 0 and 1 only)
+#	PWM/PDM waveform.
+
+setp pwmgen.0.max-dc 	 1.0
+setp pwmgen.0.min-dc 	 0.0
+setp pwmgen.0.scale		 1.0
+setp pwmgen.0.pwm-freq	 0.1
+setp pwmgen.0.dither-pwm 0
+
+setp pid.0.Pgain			1.0
+setp pid.0.Igain			0.0
+setp pid.0.Dgain			0.0
+setp pid.0.maxoutput		1.0
+setp pid.0.FF0				0.0
+setp pid.0.FF1				0.0
+setp pid.0.FF2				0.0
+setp pid.0.maxerrorI		1.0
+
+# pid.N.enable bit in
+# 	When true, enables the PID calculations. When false, output is zero, and all internal integrators, etc, are reset.
+
+setp pwmgen.0.enable	 1
+setp pid.0.enable		 1
+
+net bd-temperature <= jsteleop.bed-temperature-in => jsteleop.lcd-out-01 pid.0.feedback
+net pid1-out pid.0.output pwmgen.0.value
+net rly1-out pwmgen.0.pwm jsteleop.relay-out-06
+
 
 # Start the realtime thrads
 start
