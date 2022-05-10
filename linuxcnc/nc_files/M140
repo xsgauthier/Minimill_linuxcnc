@@ -1,9 +1,9 @@
 #!/usr/bin/python
 
 #
-# M190 P<nn>
+# M140 P<nn>
 #
-#  Set bed temperature and wait
+#  Set bed temperature (no wait)
 #
 
 import hal
