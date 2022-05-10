@@ -1,9 +1,9 @@
 #!/usr/bin/python
 
 #
-# M190 P<nn>
+# M104 P<nn>
 #
-#  Set bed temperature and wait
+#  Set extruder temperature (no wait)
 #
 
 import hal
