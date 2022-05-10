@@ -13,4 +13,4 @@ Pval = sys.argv[1]
 
 c = hal.component("_dummy_")
 c.ready()
-hal.set_p("jsteleop.lcd-out-01", str(float(Pval)/512))
+hal.set_p("jsteleop.lcd-out-02", str(float(Pval)))

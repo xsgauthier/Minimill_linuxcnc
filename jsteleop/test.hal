@@ -1,3 +1,5 @@
+loadrt threads name1=test-thread
+
 loadusr -W jsteleop /dev/ttyUSB0 3
 
 setp jsteleop.analog-in-00-gain 2.0
@@ -13,6 +15,9 @@ setp jsteleop.analog-in-02-offset -1.0
 setp jsteleop.relay-out-02-invert 1
 setp jsteleop.relay-out-06-invert 1
 
-setp jsteleop.lcd-out-00-scale 512
+net disp-lcd-00 jsteleop.extruder-temperature-in jsteleop.lcd-out-00
+net disp-lcd-01 jsteleop.bed-temperature-in jsteleop.lcd-out-01
 
-net disp-lcd-00 jsteleop.bed-temperature-in jsteleop.lcd-out-00
+# Start the realtime thrads
+start
+

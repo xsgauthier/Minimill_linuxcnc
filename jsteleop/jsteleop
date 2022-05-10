@@ -24,9 +24,12 @@ class Thermistor:
 
     def temp(self,adc):
         "Convert ADC reading into a temperature in Celcius"
-        v = adc * self.vadc / 1024          # convert the 10 bit ADC value to a voltage
-        r = self.rs * v / (self.vs - v)     # resistance of thermistor
-        return (self.beta / log(r / self.k)) - 273.15        # temperature
+        try:
+            v = adc * self.vadc / 1024          # convert the 10 bit ADC value to a voltage
+            r = self.rs * v / (self.vs - v)     # resistance of thermistor
+            return (self.beta / log(r / self.k)) - 273.15        # temperature
+        except ValueError:
+            return 511.0
 
     def setting(self, t):
         "Convert a temperature into a ADC value"
@@ -35,7 +38,8 @@ class Thermistor:
         return round(v / self.vadc * 1024)  # the ADC reading
 
 bdTrhm = Thermistor(65000, 0, 3812, 9100, 6200)
-xtTrhm = Thermistor(345184, 0, 3735, 2400, 1800)
+xtTrhm = Thermistor(100000, 25, 3950, 2400, 1800)
+# xtTrhm = Thermistor(345184, 0, 3735, 2400, 1800)
 
 def encode(addr, data):
     if data < 0 or data > 2048: raise ValueError, "data %02d out of range" % data
@@ -132,27 +136,31 @@ c['pwm-out-%02d-scale' % dacpinmap[state]] = 1.0
 c.newpin("relay-out-%02d" % pinmap[state], hal.HAL_BIT, hal.HAL_IN)
 c.newparam("relay-out-%02d-invert" % pinmap[state], hal.HAL_BIT, hal.HAL_RW)
 
-state = 2
-c.newpin("lcd-out-00", hal.HAL_FLOAT, hal.HAL_IN)
+c.newpin(  "lcd-out-00", hal.HAL_FLOAT, hal.HAL_IN)
 c.newparam("lcd-out-00-offset", hal.HAL_FLOAT, hal.HAL_RW)
 c.newparam("lcd-out-00-scale", hal.HAL_FLOAT, hal.HAL_RW)
 c['lcd-out-00-offset'] = 0.0
-c['lcd-out-00-scale'] = 1.0
+c['lcd-out-00-scale'] = 512.0
 
-state = 2
 c.newpin(  "lcd-out-01", hal.HAL_FLOAT, hal.HAL_IN)
 c.newparam("lcd-out-01-offset", hal.HAL_FLOAT, hal.HAL_RW)
 c.newparam("lcd-out-01-scale", hal.HAL_FLOAT, hal.HAL_RW)
 c['lcd-out-01-offset'] = 0.0
-c['lcd-out-01-scale'] = 1.0
+c['lcd-out-01-scale'] = 512.0
 
-#for port in range(nout):
-#    c.newpin("digital-out-%02d" % pinmap[port], hal.HAL_BIT, hal.HAL_IN)
-#    c.newparam("digital-out-%02d-invert" % pinmap[port], hal.HAL_BIT, hal.HAL_RW)
-#for port in range(nout, 6):
-#    c.newpin("digital-in-%02d" % pinmap[port], hal.HAL_BIT, hal.HAL_OUT)
-#    c.newpin("digital-in-%02d-not" % pinmap[port], hal.HAL_BIT, hal.HAL_OUT)
-#    c.newparam("digital-in-%02d-pullup" % pinmap[port], hal.HAL_BIT, hal.HAL_RW)
+c.newpin(  "lcd-out-02", hal.HAL_FLOAT, hal.HAL_IN)
+c.newparam("lcd-out-02-offset", hal.HAL_FLOAT, hal.HAL_RW)
+c.newparam("lcd-out-02-scale", hal.HAL_FLOAT, hal.HAL_RW)
+c['lcd-out-02-offset'] = 0.0
+c['lcd-out-02-scale'] = 512.0
+
+c.newpin(  "lcd-out-03", hal.HAL_FLOAT, hal.HAL_IN)
+c.newparam("lcd-out-03-offset", hal.HAL_FLOAT, hal.HAL_RW)
+c.newparam("lcd-out-03-scale", hal.HAL_FLOAT, hal.HAL_RW)
+c['lcd-out-03-offset'] = 0.0
+c['lcd-out-03-scale'] = 512.0
+
+# Module is ready
 c.ready()
 
 firstbyte = 0
@@ -216,35 +224,59 @@ try:
             if out != invert:
                 data |= 0x200
             data = data | 0x100
-            
+
             ser.write(chr(0x80 | (data >> 7)))
             ser.write(chr(data & 0x7f))
 
         if state == 2:
-            scale = c['lcd-out-00-scale'] or 1.
+            scale = c[ 'lcd-out-00-scale'] or 1.
             offset = c['lcd-out-00-offset']
-            data = (c['lcd-out-00'] - offset) / scale
+            data = (c[ 'lcd-out-00'] - offset) / scale
             data = int(data * 255 + 0.5)
             if data < 0: data = 0
             if data > 255: data = 255
             data = data | (state << 11)
-            
+
             ser.write(chr(0x80 | (data >> 7)))
             ser.write(chr(data & 0x7f))
 
         if state == 3:
-            scale = c['lcd-out-01-scale'] or 1.
+            scale = c[ 'lcd-out-01-scale'] or 1.
             offset = c['lcd-out-01-offset']
-            data = (c['lcd-out-01'] - offset) / scale
+            data = (c[ 'lcd-out-01'] - offset) / scale
             data = int(data * 255 + 0.5)
             if data < 0: data = 0
             if data > 255: data = 255
             data = data | (state << 11)
-            
+
             ser.write(chr(0x80 | (data >> 7)))
             ser.write(chr(data & 0x7f))
-            
-        state = (state+1) % 4
+
+        if state == 4:
+            scale = c[ 'lcd-out-02-scale'] or 1.
+            offset = c['lcd-out-02-offset']
+            data = (c[ 'lcd-out-02'] - offset) / scale
+            data = int(data * 255 + 0.5)
+            if data < 0: data = 0
+            if data > 255: data = 255
+            data = data | (state << 11)
+
+            ser.write(chr(0x80 | (data >> 7)))
+            ser.write(chr(data & 0x7f))
+
+        if state == 5:
+            scale = c[ 'lcd-out-03-scale'] or 1.
+            offset = c['lcd-out-03-offset']
+            data = (c[ 'lcd-out-03'] - offset) / scale
+            data = int(data * 255 + 0.5)
+            if data < 0: data = 0
+            if data > 255: data = 255
+            data = data | (state << 11)
+
+            ser.write(chr(0x80 | (data >> 7)))
+            ser.write(chr(data & 0x7f))
+
+        state = (state+1) % 6
         time.sleep(.001)
 except (KeyboardInterrupt,):
     raise SystemExit, 0
