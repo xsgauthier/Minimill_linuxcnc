@@ -1,3 +1,6 @@
+loadrt debounce cfg=1
+addf debounce.0 base-thread
+
 # connect position commands from motion module to step generator
 net Xpos-cmd joint.0.motor-pos-cmd => stepgen.0.position-cmd
 net Ypos-cmd joint.1.motor-pos-cmd => stepgen.1.position-cmd
@@ -137,3 +140,26 @@ net Zhome => joint.2.pos-lim-sw-in
 
 # net Xlimits parport.0.pin-13-in => joint.0.neg-lim-sw-in joint.0.pos-lim-sw-in
 
+###
+### Proble SETUP
+###
+setp debounce.0.delay 300
+unlinkp motion.probe-input
+net probe-in debounce.0.0.in <= parport.0.pin-15-in-not
+net probe-filt debounce.0.0.out => motion.probe-input
+
+
+###
+### Automatic bed leveling
+###
+
+loadusr -Wn compensation python compensation.py probe-results.txt cubic
+
+net expos-cmd 		<= axis.x.pos-cmd			=> compensation.x-pos
+net eypos-cmd 		<= axis.y.pos-cmd			=> compensation.y-pos
+net ezpos-cmd 		<= halui.axis.z.pos-relative	=> compensation.z-pos
+net eoffset-enable	<= compensation.enable-out	=> axis.z.eoffset-enable
+net eoffset-scale	<= compensation.scale		=> axis.z.eoffset-scale
+net eoffset-counts	<= compensation.counts 		=> axis.z.eoffset-counts
+net eoffset-clear	<= compensation.clear 		=> axis.z.eoffset-clear
+# net compensation-on	<= compensation.enable-in # See M120
