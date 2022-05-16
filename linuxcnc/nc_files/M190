@@ -21,7 +21,7 @@ hal.set_p("pid.0.command", str(set_point))
 while True:
 	temp = float(hal.get_value("jsteleop.bed-temperature-in"))
 	print(temp)
-	if temp >= set_point:
+	if temp >= ( 0.95 * set_point ):
 		break
 	
 	time.sleep(0.1)

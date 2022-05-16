@@ -153,13 +153,5 @@ net probe-filt debounce.0.0.out => motion.probe-input
 ### Automatic bed leveling
 ###
 
-loadusr -Wn compensation python compensation.py probe-results.txt cubic
+source bed_level.hal
 
-net expos-cmd 		<= axis.x.pos-cmd			=> compensation.x-pos
-net eypos-cmd 		<= axis.y.pos-cmd			=> compensation.y-pos
-net ezpos-cmd 		<= halui.axis.z.pos-relative	=> compensation.z-pos
-net eoffset-enable	<= compensation.enable-out	=> axis.z.eoffset-enable
-net eoffset-scale	<= compensation.scale		=> axis.z.eoffset-scale
-net eoffset-counts	<= compensation.counts 		=> axis.z.eoffset-counts
-net eoffset-clear	<= compensation.clear 		=> axis.z.eoffset-clear
-# net compensation-on	<= compensation.enable-in # See M120
