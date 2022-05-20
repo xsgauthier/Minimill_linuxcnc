@@ -18,7 +18,7 @@ uint8_t dac = 0;
 uint8_t pinmap[2] = {2, 6};
 uint8_t dacpinmap[2] = {3, 5};
 
-uint8_t lcd_val[2] = {0, 0};
+uint8_t lcd_val[4] = {0, 0, 0, 0};
 
 void pval3(const char *msg, uint16_t pv, uint8_t sCol, uint8_t sRow, uint8_t pRow)
 {
@@ -52,6 +52,10 @@ void loop() {
         lcd_val[0] = dac;
       } else if (address == 3) {
         lcd_val[1] = dac;
+      } else if (address == 4) {
+        lcd_val[2] = dac;
+      } else if (address == 5) {
+        lcd_val[3] = dac;
       }
     }
     firstbyte = byte;
@@ -62,8 +66,12 @@ void loop() {
     pval3("XT:   C", pv, 0/* Col */, 0/* Row */, 3/* Rel. Offt */);
     pv = lcd_val[1] << 1;
     pval3("BD:   C", pv, 0/* Col */, 8/* Row */, 3/* Rel. Offt */);
+    pv = lcd_val[2] << 1;
+    pval3("SP:   C", pv, 1/* Col */, 0/* Row */, 3/* Rel. Offt */);
+    pv = lcd_val[3] << 1;
+    pval3("SP:   C", pv, 1/* Col */, 8/* Row */, 3/* Rel. Offt */);
     
-    lcdUpdateTime = millis() + 1000;
+    lcdUpdateTime = millis() + 500;
   }
 
   if (millis() > gcPollTime)
